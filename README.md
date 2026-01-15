@@ -241,7 +241,8 @@ migration:
 - 表迁移详情（行数、速度、验证结果）
 - 完整执行日志
 - 配置快照
-<img width="1449" height="760" alt="image" src="https://github.com/user-attachments/assets/ab2753a8-e3dc-4f2c-8b86-b89be448576d" />
+<img width="1403" height="1181" alt="image" src="https://github.com/user-attachments/assets/e7ef9126-1a68-4899-b870-0c11e9d78ca5" />
+
 
 
 ## 🔧 高级功能
