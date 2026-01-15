@@ -66,27 +66,16 @@ def run_migration_task(task_id: int, config_dict: dict):
         with open(temp_config_file, 'w', encoding='utf-8') as f:
             yaml.dump(config_dict, f, allow_unicode=True, default_flow_style=False)
         
-        # 创建任务日志记录器
+        # 创建任务日志记录器（只用于迁移任务日志）
         task_logger = TaskLogger(task_id, db)
         logger = task_logger.get_logger()
-        
-        # 更新标准输出，让原有代码的日志也能记录
-        original_handlers = logging.root.handlers[:]
-        logging.root.handlers = []
-        
-        # 创建新的处理器
-        handler = TaskLogHandler(task_id, db)
-        handler.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logging.root.addHandler(handler)
         
         try:
             # 加载配置并运行迁移
             config = Config(temp_config_file)
             
             with MySQLToClickHouseMigration(config) as migration:
-                # 重定向migration的logger
+                # 重定向migration的logger到任务专用logger
                 migration.logger = logger
                 
                 # 运行迁移
@@ -134,9 +123,6 @@ def run_migration_task(task_id: int, config_dict: dict):
             )
         
         finally:
-            # 恢复原始日志处理器
-            logging.root.handlers = original_handlers
-            
             # 删除临时配置文件
             if os.path.exists(temp_config_file):
                 os.remove(temp_config_file)
@@ -279,6 +265,20 @@ def get_recent_tasks():
 
 
 if __name__ == '__main__':
+    # 配置 Flask/Werkzeug 日志，只在控制台显示，不传播到 root logger
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.INFO)
+    # 移除所有现有处理器
+    werkzeug_logger.handlers = []
+    # 只添加控制台处理器
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s')
+    console_handler.setFormatter(formatter)
+    werkzeug_logger.addHandler(console_handler)
+    # 不传播到 root logger，避免被任务日志捕获
+    werkzeug_logger.propagate = False
+    
     print("=" * 60)
     print("MySQL to ClickHouse 迁移工具 Web 界面")
     print("=" * 60)
