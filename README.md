@@ -59,8 +59,9 @@ python app.py
 
 2. **访问 Web 界面**
 打开浏览器访问：`http://127.0.0.1:5000`
+<img width="1814" height="1277" alt="image" src="https://github.com/user-attachments/assets/dbf6f085-5658-4f35-80cf-b29641e30695" />
 
-3. **配置和启动**
+4. **配置和启动**
    - 在配置页面填写 MySQL 和 ClickHouse 连接信息
    - 添加要迁移的表
    - 点击"启动迁移任务"开始迁移
@@ -131,12 +132,18 @@ migration:
 - 实时查看任务执行状态
 - 查看详细的执行日志
 - 查看每个表的迁移详情
+<img width="1444" height="369" alt="image" src="https://github.com/user-attachments/assets/46ed1b11-de08-4be1-b5fe-cc3c0376241b" />
+
+<img width="1426" height="402" alt="image" src="https://github.com/user-attachments/assets/cc71fa47-127b-4b0d-a56b-b5847f9fd430" />
+
 
 ### 任务详情
 - 任务基本信息（状态、时间、统计）
 - 表迁移详情（行数、速度、验证结果）
 - 完整执行日志
 - 配置快照
+<img width="1449" height="760" alt="image" src="https://github.com/user-attachments/assets/ab2753a8-e3dc-4f2c-8b86-b89be448576d" />
+
 
 ## 🔧 高级功能
 
@@ -144,11 +151,15 @@ migration:
 - 调整批次大小：根据数据量和网络情况调整 `batch_size`
 - 连接超时设置：配置 `connection_timeout` 和 `read_timeout`
 - MySQL 获取大小：调整 `mysql_fetch_size` 优化读取性能
+<img width="912" height="250" alt="image" src="https://github.com/user-attachments/assets/0d5880aa-7a51-4c87-a9c3-7eb16b3d9398" />
+
 
 ### 错误处理
 - `continue_on_error: true`：遇到错误时继续执行其他表
 - `skip_empty_tables: true`：自动跳过空表
 - 详细的错误日志记录
+<img width="928" height="210" alt="image" src="https://github.com/user-attachments/assets/20390271-7a76-47ff-a579-6493c0cb3046" />
+
 
 ### 飞书通知
 配置飞书机器人 Webhook，支持：
@@ -156,6 +167,7 @@ migration:
 - 任务成功通知
 - 任务失败通知
 - 进度更新通知（可选）
+<img width="922" height="544" alt="image" src="https://github.com/user-attachments/assets/b74746d3-e596-4ca4-a4a0-c6e66db11f9c" />
 
 ## 📁 项目结构
 
