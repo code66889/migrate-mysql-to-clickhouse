@@ -1,0 +1,78 @@
+# MySQL to ClickHouse Migration Configuration Template
+# ====================================================
+# 复制此文件为 conf.yaml 并填写实际的配置信息
+
+# MySQL 数据库配置
+mysql:
+  host: "your-mysql-host"              # MySQL 服务器地址
+  port: 3306                            # MySQL 端口，默认 3306
+  user: "your-mysql-user"               # MySQL 用户名
+  password: "your-mysql-password"       # MySQL 密码
+  database: "your-database-name"        # 要迁移的数据库名
+  charset: "utf8mb4"                    # 字符集，推荐使用 utf8mb4
+
+# ClickHouse 数据库配置
+clickhouse:
+  host: "your-clickhouse-host"         # ClickHouse 服务器地址
+  port: 8123                             # ClickHouse HTTP 端口，默认 8123
+  user: "default"                       # ClickHouse 用户名
+  password: "your-clickhouse-password"   # ClickHouse 密码
+  database: "your-database-name"        # 目标数据库名
+
+# 迁移任务配置
+migration:
+  # 要迁移的表列表
+  tables:
+    - mysql_table: "source_table_name"  # MySQL 源表名
+      ch_table: "target_table_name"     # ClickHouse 目标表名
+      batch_size: 10000                  # 批次大小（可选，覆盖默认值）
+      verify: true                       # 是否验证数据（可选，覆盖默认值）
+  
+  # 默认配置
+  default_batch_size: 10000              # 默认批次大小，建议 10000-50000
+  default_verify: true                   # 默认是否验证数据一致性
+  log_interval: 3                        # 日志输出间隔（秒）
+  progress_bar_width: 40                 # 进度条宽度
+
+# 日志配置
+logging:
+  level: "INFO"                         # 日志级别: DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(levelname)s - %(message)s"  # 日志格式
+  date_format: "%Y-%m-%d %H:%M:%S"      # 日期格式
+  file_prefix: "migration"              # 日志文件前缀
+  console_output: true                   # 是否输出到控制台
+
+# 性能优化配置
+performance:
+  mysql_fetch_size: 1000                # MySQL 每次获取的行数
+  clickhouse_max_insert_block_size: 1048576  # ClickHouse 最大插入块大小（字节）
+  connection_timeout: 30                # 连接超时时间（秒）
+  read_timeout: 60                      # 读取超时时间（秒）
+
+# 高级选项
+advanced:
+  drop_table_before_create: true        # 创建表前是否删除已存在的表
+  create_database_if_not_exists: false  # 数据库不存在时是否创建
+  skip_empty_tables: true                # 是否跳过空表
+  continue_on_error: false               # 遇到错误时是否继续执行
+
+# 飞书通知配置（可选）
+feishu:
+  enabled: false                         # 是否启用飞书通知
+  webhook_url: "your-feishu-webhook-url" # 飞书机器人 Webhook URL
+  
+  # 通知场景配置
+  notify_on_start: true                  # 任务开始时通知
+  notify_on_success: true                # 任务成功时通知
+  notify_on_failure: true               # 任务失败时通知
+  notify_on_progress: false             # 进度更新时通知（慎用，会频繁发送）
+  progress_notify_interval: 300         # 进度通知间隔（秒），仅当 notify_on_progress=true
+  
+  # 通知内容配置
+  mention_users: []                     # @用户的 user_id 列表，如: ["ou_xxx", "ou_yyy"]
+  mention_all: false                    # 是否 @所有人
+  
+  # 自定义信息
+  env_name: "生产环境"                  # 环境名称
+  project_name: "数据迁移系统"          # 项目名称
+

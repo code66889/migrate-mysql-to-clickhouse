@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+
+{% block title %}任务详情 #{{ task_id }} - MySQL to ClickHouse 迁移工具{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+        padding: 32px;
+        width: 100%;
+    }
+    .page-title {
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        font-size: 28px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .page-title::before {
+        content: '📊';
+        font-size: 32px;
+    }
+    .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin-bottom: 24px;
+    }
+    .section {
+        margin-bottom: 32px;
+    }
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 16px;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-color);
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .info-item {
+        padding: 16px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s;
+    }
+    .info-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+    .info-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+    .info-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .status {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    .status.running {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--info-color);
+    }
+    .status.completed {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success-color);
+    }
+    .status.failed {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger-color);
+    }
+    .status.success {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success-color);
+    }
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-top: 16px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    th, td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+    th {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 13px;
+    }
+    tbody tr {
+        transition: all 0.2s;
+    }
+    tbody tr:hover {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+    .log-container {
+        max-height: 600px;
+        overflow-y: auto;
+        border: 1.5px solid var(--border-color);
+        border-radius: 10px;
+        padding: 16px;
+        background: #1e293b;
+        color: #e2e8f0;
+        font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    .log-entry {
+        margin-bottom: 6px;
+        padding: 4px 0;
+    }
+    .log-INFO {
+        color: #34d399;
+    }
+    .log-WARNING {
+        color: #fbbf24;
+    }
+    .log-ERROR {
+        color: #f87171;
+    }
+    .log-DEBUG {
+        color: #60a5fa;
+    }
+    .config-preview {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1.5px solid var(--border-color);
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 16px;
+        font-size: 14px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .config-item {
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .config-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    .config-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+        font-size: 13px;
+    }
+    .config-value {
+        color: var(--text-secondary);
+        font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+        font-size: 13px;
+        background: var(--card-bg);
+        padding: 8px 12px;
+        border-radius: 6px;
+        display: inline-block;
+    }
+    .tabs {
+        display: flex;
+        border-bottom: 2px solid var(--border-color);
+        margin-bottom: 24px;
+        gap: 8px;
+    }
+    .tab {
+        padding: 12px 24px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+        border-radius: 8px 8px 0 0;
+    }
+    .tab:hover {
+        color: var(--primary-color);
+        background: rgba(99, 102, 241, 0.05);
+    }
+    .tab.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        font-weight: 600;
+        background: rgba(99, 102, 241, 0.05);
+    }
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .tab-content.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <h1 class="page-title">任务详情 #{{ task_id }}</h1>
+    <p class="page-subtitle">查看任务执行详情、日志和配置信息</p>
+    
+    <div id="taskInfo">
+        <div class="section">
+            <div class="section-title">📋 任务信息</div>
+            <div class="info-grid" id="infoGrid">
+                <div class="info-item">
+                    <div class="info-label">任务名称</div>
+                    <div class="info-value" id="taskName">加载中...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">状态</div>
+                    <div class="info-value" id="taskStatus">加载中...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">开始时间</div>
+                    <div class="info-value" id="startTime">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">结束时间</div>
+                    <div class="info-value" id="endTime">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">总表数</div>
+                    <div class="info-value" id="totalTables">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">成功/失败</div>
+                    <div class="info-value" id="successFailed">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">总行数</div>
+                    <div class="info-value" id="totalRows">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">总耗时</div>
+                    <div class="info-value" id="totalTime">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('tables')">📊 表迁移详情</button>
+            <button class="tab" onclick="switchTab('logs')">📝 任务日志</button>
+            <button class="tab" onclick="switchTab('config')">⚙️ 配置快照</button>
+        </div>
+        
+        <div id="tables-tab" class="tab-content active">
+            <div class="section">
+                <div class="section-title">表迁移详情</div>
+                <table id="tablesTable">
+                    <thead>
+                        <tr>
+                            <th>MySQL表</th>
+                            <th>ClickHouse表</th>
+                            <th>状态</th>
+                            <th>行数</th>
+                            <th>耗时</th>
+                            <th>速度</th>
+                            <th>验证</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablesBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px;">
+                                加载中...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="logs-tab" class="tab-content">
+            <div class="section">
+                <div class="section-title">任务日志</div>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry">加载中...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="config-tab" class="tab-content">
+            <div class="section">
+                <div class="section-title">配置快照</div>
+                <div class="config-preview" id="configPreview">
+                    加载中...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const taskId = {{ task_id }};
+    let autoRefresh = true;
+
+    function switchTab(tabName) {
+        // 隐藏所有标签页内容
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // 显示选中的标签页
+        document.getElementById(tabName + '-tab').classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    function renderConfigPreview(config) {
+        if (!config) return '无配置信息';
+        
+        let html = '';
+        
+        if (config.mysql) {
+            html += `
+                <div class="config-item">
+                    <div class="config-label">🗄️ MySQL 数据库</div>
+                    <div class="config-value">${config.mysql.host}:${config.mysql.port} / ${config.mysql.database}</div>
+                </div>
+            `;
+        }
+        
+        if (config.clickhouse) {
+            html += `
+                <div class="config-item">
+                    <div class="config-label">⚡ ClickHouse 数据库</div>
+                    <div class="config-value">${config.clickhouse.host}:${config.clickhouse.port} / ${config.clickhouse.database}</div>
+                </div>
+            `;
+        }
+        
+        if (config.migration && config.migration.tables) {
+            html += `
+                <div class="config-item">
+                    <div class="config-label">📦 迁移表列表</div>
+                    <div class="config-value">${config.migration.tables.map(t => `${t.mysql_table} → ${t.ch_table}`).join(', ')}</div>
+                </div>
+            `;
+        }
+        
+        if (config.migration) {
+            html += `
+                <div class="config-item">
+                    <div class="config-label">⚙️ 默认批次大小</div>
+                    <div class="config-value">${config.migration.default_batch_size || 10000}</div>
+                </div>
+            `;
+        }
+        
+        return html || '无配置信息';
+    }
+
+    async function loadTaskDetail() {
+        try {
+            const response = await fetch(`/api/task/${taskId}`);
+            const data = await response.json();
+            
+            const task = data.task;
+            const logs = data.logs || [];
+            const tableMigrations = data.table_migrations || [];
+            
+            // 更新任务信息
+            document.getElementById('taskName').textContent = task.task_name || '-';
+            document.getElementById('taskStatus').innerHTML = 
+                `<span class="status ${task.status}">${getStatusText(task.status)}</span>`;
+            document.getElementById('startTime').textContent = task.start_time || '-';
+            document.getElementById('endTime').textContent = task.end_time || '-';
+            document.getElementById('totalTables').textContent = task.total_tables || 0;
+            document.getElementById('successFailed').textContent = 
+                `${task.success_tables || 0}/${task.failed_tables || 0}`;
+            document.getElementById('totalRows').textContent = 
+                task.total_rows ? formatNumber(task.total_rows) : '-';
+            document.getElementById('totalTime').textContent = 
+                task.total_time ? formatTime(task.total_time) : '-';
+            
+            // 更新表迁移详情
+            const tbody = document.getElementById('tablesBody');
+            if (tableMigrations.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">
+                            暂无表迁移记录
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = tableMigrations.map(tm => {
+                    return `
+                        <tr>
+                            <td><strong>${tm.mysql_table}</strong></td>
+                            <td><strong>${tm.ch_table}</strong></td>
+                            <td><span class="status ${tm.status}">${getStatusText(tm.status)}</span></td>
+                            <td>${tm.rows ? formatNumber(tm.rows) : '-'}</td>
+                            <td>${tm.time_used ? formatTime(tm.time_used) : '-'}</td>
+                            <td>${tm.speed ? formatNumber(Math.round(tm.speed)) + ' rows/s' : '-'}</td>
+                            <td>${tm.verified ? '✅' : '❌'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            
+            // 更新日志
+            const logContainer = document.getElementById('logContainer');
+            if (logs.length === 0) {
+                logContainer.innerHTML = '<div class="log-entry">暂无日志</div>';
+            } else {
+                logContainer.innerHTML = logs.reverse().map(log => {
+                    return `
+                        <div class="log-entry log-${log.log_level}">
+                            [${log.log_time}] [${log.log_level}] ${escapeHtml(log.log_message)}
+                        </div>
+                    `;
+                }).join('');
+                // 滚动到底部
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // 更新配置预览
+            if (task.config_snapshot) {
+                document.getElementById('configPreview').innerHTML = renderConfigPreview(task.config_snapshot);
+            }
+            
+            // 如果任务已完成或失败，停止自动刷新
+            if (task.status === 'completed' || task.status === 'failed') {
+                autoRefresh = false;
+            }
+        } catch (error) {
+            console.error('加载任务详情失败:', error);
+        }
+    }
+
+    function getStatusText(status) {
+        const statusMap = {
+            'running': '🔄 运行中',
+            'completed': '✅ 已完成',
+            'failed': '❌ 失败',
+            'success': '✅ 成功'
+        };
+        return statusMap[status] || status || '未知';
+    }
+
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function formatTime(seconds) {
+        if (seconds < 60) {
+            return Math.round(seconds) + 's';
+        } else if (seconds < 3600) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.round(seconds % 60);
+            return m + 'm ' + s + 's';
+        } else {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return h + 'h ' + m + 'm';
+        }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // 初始加载
+    loadTaskDetail();
+    
+    // 如果任务正在运行，每2秒刷新一次
+    if (autoRefresh) {
+        setInterval(() => {
+            if (autoRefresh) {
+                loadTaskDetail();
+            }
+        }, 2000);
+    }
+</script>
+{% endblock %}

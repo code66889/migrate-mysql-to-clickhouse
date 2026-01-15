@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}任务历史 - MySQL to ClickHouse 迁移工具{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+        padding: 32px;
+        width: 100%;
+    }
+    .page-title {
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        font-size: 28px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .page-title::before {
+        content: '📋';
+        font-size: 32px;
+    }
+    .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin-bottom: 24px;
+    }
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-top: 24px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    th, td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+    th {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    tbody tr {
+        transition: all 0.2s;
+    }
+    tbody tr:hover {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        transform: scale(1.01);
+    }
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+    .status {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    .status.running {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--info-color);
+    }
+    .status.completed {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success-color);
+    }
+    .status.failed {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger-color);
+    }
+    .btn-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 13px;
+        transition: all 0.2s;
+        display: inline-block;
+    }
+    .btn-link:hover {
+        background: rgba(99, 102, 241, 0.1);
+        transform: translateY(-1px);
+    }
+    .task-name-link {
+        color: var(--text-primary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+    .task-name-link:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+    .empty-state::before {
+        content: '📭';
+        display: block;
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <h1 class="page-title">任务历史</h1>
+    <p class="page-subtitle">查看所有迁移任务的执行历史和状态</p>
+    
+    <table id="tasksTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>任务名称</th>
+                <th>状态</th>
+                <th>开始时间</th>
+                <th>结束时间</th>
+                <th>表数量</th>
+                <th>成功/总数</th>
+                <th>总行数</th>
+                <th>耗时</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="tasksBody">
+            <tr>
+                <td colspan="10" class="empty-state">
+                    加载中...
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadTasks() {
+        try {
+            const response = await fetch('/api/tasks');
+            const tasks = await response.json();
+            
+            const tbody = document.getElementById('tasksBody');
+            
+            if (tasks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="empty-state">
+                            暂无任务记录
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = tasks.map(task => {
+                const statusClass = task.status || 'unknown';
+                const successCount = task.success_tables || 0;
+                const totalCount = task.total_tables || 0;
+                const totalRows = task.total_rows ? formatNumber(task.total_rows) : '-';
+                const totalTime = task.total_time ? formatTime(task.total_time) : '-';
+                const taskName = task.task_name || `任务 #${task.id}`;
+                
+                return `
+                    <tr>
+                        <td><strong>#${task.id}</strong></td>
+                        <td><a href="/task/${task.id}" class="task-name-link">${taskName}</a></td>
+                        <td><span class="status ${statusClass}">${getStatusText(task.status)}</span></td>
+                        <td>${task.start_time || '-'}</td>
+                        <td>${task.end_time || '-'}</td>
+                        <td>${totalCount}</td>
+                        <td><strong>${successCount}</strong>/${totalCount}</td>
+                        <td>${totalRows}</td>
+                        <td>${totalTime}</td>
+                        <td><a href="/task/${task.id}" class="btn-link">查看详情 →</a></td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (error) {
+            document.getElementById('tasksBody').innerHTML = `
+                <tr>
+                    <td colspan="10" style="text-align: center; padding: 40px; color: var(--danger-color);">
+                        ❌ 加载失败: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function getStatusText(status) {
+        const statusMap = {
+            'running': '🔄 运行中',
+            'completed': '✅ 已完成',
+            'failed': '❌ 失败'
+        };
+        return statusMap[status] || status || '未知';
+    }
+
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function formatTime(seconds) {
+        if (seconds < 60) {
+            return Math.round(seconds) + 's';
+        } else if (seconds < 3600) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.round(seconds % 60);
+            return m + 'm ' + s + 's';
+        } else {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return h + 'h ' + m + 'm';
+        }
+    }
+
+    window.onload = loadTasks;
+    
+    // 每5秒刷新一次
+    setInterval(loadTasks, 5000);
+</script>
+{% endblock %}

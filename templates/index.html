@@ -1,0 +1,891 @@
+{% extends "base.html" %}
+
+{% block title %}配置管理 - MySQL to ClickHouse 迁移工具{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-container {
+        display: grid;
+        grid-template-columns: 900px 360px;
+        gap: 24px;
+        margin: 0 auto;
+        justify-content: center;
+    }
+    .main-panel {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+        padding: 32px;
+        width: 900px;
+        transition: box-shadow 0.3s;
+    }
+    .main-panel:hover {
+        box-shadow: var(--shadow-lg);
+    }
+    .sidebar-panel {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+        padding: 24px;
+        height: fit-content;
+        position: sticky;
+        top: 24px;
+    }
+    .page-title {
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        font-size: 28px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .page-title::before {
+        content: '⚙️';
+        font-size: 32px;
+    }
+    .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin-bottom: 24px;
+    }
+    .section {
+        margin-bottom: 32px;
+    }
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 16px;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .form-group {
+        margin-bottom: 18px;
+    }
+    label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 14px;
+    }
+    input[type="text"], input[type="number"], input[type="password"], 
+    textarea, select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1.5px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.2s;
+        background: var(--card-bg);
+        color: var(--text-primary);
+    }
+    input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    .table-config {
+        border: 1.5px solid var(--border-color);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, #fafbfc 0%, #f8fafc 100%);
+        transition: all 0.3s;
+    }
+    .table-config:hover {
+        border-color: var(--primary-color);
+        box-shadow: var(--shadow-sm);
+    }
+    .table-config-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    .table-config-header strong {
+        color: var(--text-primary);
+        font-size: 15px;
+    }
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: var(--shadow-sm);
+    }
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+    }
+    .btn:active {
+        transform: translateY(0);
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, var(--success-color) 0%, var(--success-hover) 100%);
+        color: white;
+    }
+    .btn-primary:hover {
+        background: linear-gradient(135deg, var(--success-hover) 0%, #047857 100%);
+    }
+    .btn-primary::before {
+        content: '🚀';
+    }
+    .btn-danger {
+        background: linear-gradient(135deg, var(--danger-color) 0%, var(--danger-hover) 100%);
+        color: white;
+    }
+    .btn-danger:hover {
+        background: linear-gradient(135deg, var(--danger-hover) 0%, #b91c1c 100%);
+    }
+    .btn-secondary {
+        background: linear-gradient(135deg, var(--info-color) 0%, #2563eb 100%);
+        color: white;
+    }
+    .btn-secondary:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    }
+    .btn-secondary::before {
+        content: '➕';
+    }
+    .btn-small {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1.5px solid var(--border-color);
+    }
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--primary-color);
+    }
+    .message {
+        padding: 14px 18px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        display: none;
+        animation: slideDown 0.3s ease;
+        border-left: 4px solid;
+    }
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .message.success {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        color: #065f46;
+        border-left-color: var(--success-color);
+    }
+    .message.error {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+        border-left-color: var(--danger-color);
+    }
+    .sidebar-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .sidebar-title::before {
+        content: '📊';
+    }
+    .task-item {
+        padding: 14px;
+        margin-bottom: 12px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 10px;
+        border-left: 4px solid var(--border-color);
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .task-item:hover {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        transform: translateX(4px);
+        box-shadow: var(--shadow-sm);
+    }
+    .task-item.running {
+        border-left-color: var(--info-color);
+    }
+    .task-item.completed {
+        border-left-color: var(--success-color);
+    }
+    .task-item.failed {
+        border-left-color: var(--danger-color);
+    }
+    .task-name {
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+        font-size: 14px;
+    }
+    .task-meta {
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .task-status {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .task-status.running {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--info-color);
+    }
+    .task-status.completed {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success-color);
+    }
+    .task-status.failed {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger-color);
+    }
+    .view-all-link {
+        display: block;
+        text-align: center;
+        margin-top: 16px;
+        color: var(--primary-color);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 10px;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+    .view-all-link:hover {
+        background: rgba(99, 102, 241, 0.1);
+        text-decoration: none;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+    .empty-state::before {
+        content: '📭';
+        display: block;
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="main-panel">
+        <h1 class="page-title">配置管理</h1>
+        <p class="page-subtitle">配置MySQL和ClickHouse数据库连接信息，设置迁移参数</p>
+        
+        <div id="message" class="message"></div>
+        
+        <form id="configForm">
+            <!-- MySQL配置 -->
+            <div class="section">
+                <div class="section-title">🗄️ MySQL 数据库配置</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>主机地址</label>
+                        <input type="text" name="mysql.host" id="mysql_host" required>
+                    </div>
+                    <div class="form-group">
+                        <label>端口</label>
+                        <input type="number" name="mysql.port" id="mysql_port" value="3306" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>用户名</label>
+                        <input type="text" name="mysql.user" id="mysql_user" required>
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" name="mysql.password" id="mysql_password" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>数据库名</label>
+                        <input type="text" name="mysql.database" id="mysql_database" required>
+                    </div>
+                    <div class="form-group">
+                        <label>字符集</label>
+                        <input type="text" name="mysql.charset" id="mysql_charset" value="utf8mb4">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ClickHouse配置 -->
+            <div class="section">
+                <div class="section-title">⚡ ClickHouse 数据库配置</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>主机地址</label>
+                        <input type="text" name="clickhouse.host" id="clickhouse_host" required>
+                    </div>
+                    <div class="form-group">
+                        <label>端口</label>
+                        <input type="number" name="clickhouse.port" id="clickhouse_port" value="8123" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>用户名</label>
+                        <input type="text" name="clickhouse.user" id="clickhouse_user" required>
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" name="clickhouse.password" id="clickhouse_password" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>数据库名</label>
+                    <input type="text" name="clickhouse.database" id="clickhouse_database" required>
+                </div>
+            </div>
+
+            <!-- 迁移任务配置 -->
+            <div class="section">
+                <div class="section-title">📦 迁移任务配置</div>
+                <div id="tablesContainer"></div>
+                <button type="button" class="btn btn-secondary" onclick="addTable()">添加表</button>
+                
+                <div class="form-row" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>默认批次大小</label>
+                        <input type="number" name="migration.default_batch_size" id="default_batch_size" value="10000">
+                    </div>
+                    <div class="form-group">
+                        <label>日志间隔(秒)</label>
+                        <input type="number" name="migration.log_interval" id="log_interval" value="3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="migration.default_verify" id="default_verify" checked>
+                        <label for="default_verify">默认验证数据</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 日志配置 -->
+            <div class="section">
+                <div class="section-title">📝 日志配置</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>日志级别</label>
+                        <select name="logging.level" id="logging_level">
+                            <option value="DEBUG">DEBUG</option>
+                            <option value="INFO" selected>INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>日志文件前缀</label>
+                        <input type="text" name="logging.file_prefix" id="file_prefix" value="migration">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="logging.console_output" id="console_output" checked>
+                        <label for="console_output">控制台输出</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 性能配置 -->
+            <div class="section">
+                <div class="section-title">⚡ 性能优化配置</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>MySQL获取大小</label>
+                        <input type="number" name="performance.mysql_fetch_size" id="mysql_fetch_size" value="1000">
+                    </div>
+                    <div class="form-group">
+                        <label>连接超时(秒)</label>
+                        <input type="number" name="performance.connection_timeout" id="connection_timeout" value="30">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>读取超时(秒)</label>
+                    <input type="number" name="performance.read_timeout" id="read_timeout" value="60">
+                </div>
+            </div>
+
+            <!-- 高级选项 -->
+            <div class="section">
+                <div class="section-title">🔧 高级选项</div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="advanced.drop_table_before_create" id="drop_table_before_create" checked>
+                        <label for="drop_table_before_create">创建前删除表</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="advanced.skip_empty_tables" id="skip_empty_tables" checked>
+                        <label for="skip_empty_tables">跳过空表</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="advanced.continue_on_error" id="continue_on_error">
+                        <label for="continue_on_error">出错时继续</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 飞书通知配置 -->
+            <div class="section">
+                <div class="section-title">📢 飞书通知配置</div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="feishu.enabled" id="feishu_enabled" checked>
+                        <label for="feishu_enabled">启用飞书通知</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Webhook URL</label>
+                    <input type="text" name="feishu.webhook_url" id="feishu_webhook_url" style="width: 100%;">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>环境名称</label>
+                        <input type="text" name="feishu.env_name" id="feishu_env_name" value="测试环境">
+                    </div>
+                    <div class="form-group">
+                        <label>项目名称</label>
+                        <input type="text" name="feishu.project_name" id="feishu_project_name" value="数据迁移系统">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="feishu.notify_on_start" id="notify_on_start" checked>
+                        <label for="notify_on_start">任务开始时通知</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="feishu.notify_on_success" id="notify_on_success" checked>
+                        <label for="notify_on_success">任务成功时通知</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="feishu.notify_on_failure" id="notify_on_failure" checked>
+                        <label for="notify_on_failure">任务失败时通知</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="button" class="btn btn-secondary" onclick="saveConfig()">💾 保存配置</button>
+                <button type="button" class="btn btn-primary" onclick="startMigration()">启动迁移任务</button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="sidebar-panel">
+        <div class="sidebar-title">最近任务</div>
+        <div id="recentTasks">
+            <div class="empty-state">加载中...</div>
+        </div>
+        <a href="/tasks" class="view-all-link">查看所有任务 →</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let tableIndex = 0;
+
+    // 加载配置
+    async function loadConfig() {
+        try {
+            const response = await fetch('/api/config');
+            const config = await response.json();
+            
+            // 填充表单
+            if (config.mysql) {
+                document.getElementById('mysql_host').value = config.mysql.host || '';
+                document.getElementById('mysql_port').value = config.mysql.port || 3306;
+                document.getElementById('mysql_user').value = config.mysql.user || '';
+                document.getElementById('mysql_password').value = config.mysql.password || '';
+                document.getElementById('mysql_database').value = config.mysql.database || '';
+                document.getElementById('mysql_charset').value = config.mysql.charset || 'utf8mb4';
+            }
+            
+            if (config.clickhouse) {
+                document.getElementById('clickhouse_host').value = config.clickhouse.host || '';
+                document.getElementById('clickhouse_port').value = config.clickhouse.port || 8123;
+                document.getElementById('clickhouse_user').value = config.clickhouse.user || '';
+                document.getElementById('clickhouse_password').value = config.clickhouse.password || '';
+                document.getElementById('clickhouse_database').value = config.clickhouse.database || '';
+            }
+            
+            if (config.migration) {
+                document.getElementById('default_batch_size').value = config.migration.default_batch_size || 10000;
+                document.getElementById('log_interval').value = config.migration.log_interval || 3;
+                document.getElementById('default_verify').checked = config.migration.default_verify !== false;
+                
+                if (config.migration.tables && config.migration.tables.length > 0) {
+                    config.migration.tables.forEach(table => {
+                        addTable(table.mysql_table, table.ch_table, table.batch_size, table.verify);
+                    });
+                } else {
+                    addTable();
+                }
+            } else {
+                addTable();
+            }
+            
+            if (config.logging) {
+                document.getElementById('logging_level').value = config.logging.level || 'INFO';
+                document.getElementById('file_prefix').value = config.logging.file_prefix || 'migration';
+                document.getElementById('console_output').checked = config.logging.console_output !== false;
+            }
+            
+            if (config.performance) {
+                document.getElementById('mysql_fetch_size').value = config.performance.mysql_fetch_size || 1000;
+                document.getElementById('connection_timeout').value = config.performance.connection_timeout || 30;
+                document.getElementById('read_timeout').value = config.performance.read_timeout || 60;
+            }
+            
+            if (config.advanced) {
+                document.getElementById('drop_table_before_create').checked = config.advanced.drop_table_before_create !== false;
+                document.getElementById('skip_empty_tables').checked = config.advanced.skip_empty_tables !== false;
+                document.getElementById('continue_on_error').checked = config.advanced.continue_on_error || false;
+            }
+            
+            if (config.feishu) {
+                document.getElementById('feishu_enabled').checked = config.feishu.enabled !== false;
+                document.getElementById('feishu_webhook_url').value = config.feishu.webhook_url || '';
+                document.getElementById('feishu_env_name').value = config.feishu.env_name || '测试环境';
+                document.getElementById('feishu_project_name').value = config.feishu.project_name || '数据迁移系统';
+                document.getElementById('notify_on_start').checked = config.feishu.notify_on_start !== false;
+                document.getElementById('notify_on_success').checked = config.feishu.notify_on_success !== false;
+                document.getElementById('notify_on_failure').checked = config.feishu.notify_on_failure !== false;
+            }
+        } catch (error) {
+            showMessage('加载配置失败: ' + error.message, 'error');
+        }
+    }
+
+    // 加载最近任务
+    async function loadRecentTasks() {
+        try {
+            const response = await fetch('/api/tasks/recent?limit=5');
+            const tasks = await response.json();
+            
+            const container = document.getElementById('recentTasks');
+            
+            if (tasks.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无任务记录</div>';
+                return;
+            }
+            
+            container.innerHTML = tasks.map(task => {
+                const statusClass = task.status || 'unknown';
+                const statusText = getStatusText(task.status);
+                const time = task.start_time || '-';
+                
+                return `
+                    <div class="task-item ${statusClass}" onclick="window.location.href='/task/${task.id}'">
+                        <div class="task-name">${task.task_name || `任务 #${task.id}`}</div>
+                        <div class="task-meta">
+                            <span>${time}</span>
+                            <span class="task-status ${statusClass}">${statusText}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            document.getElementById('recentTasks').innerHTML = 
+                '<div class="empty-state">加载失败</div>';
+        }
+    }
+
+    function getStatusText(status) {
+        const statusMap = {
+            'running': '运行中',
+            'completed': '已完成',
+            'failed': '失败'
+        };
+        return statusMap[status] || status || '未知';
+    }
+
+    // 添加表配置
+    function addTable(mysqlTable = '', chTable = '', batchSize = '', verify = true) {
+        const container = document.getElementById('tablesContainer');
+        const index = tableIndex++;
+        const div = document.createElement('div');
+        div.className = 'table-config';
+        div.id = `table-${index}`;
+        div.innerHTML = `
+            <div class="table-config-header">
+                <strong>表配置 #${index + 1}</strong>
+                <button type="button" class="btn btn-danger btn-small" onclick="removeTable(${index})">🗑️ 删除</button>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>MySQL表名</label>
+                    <input type="text" name="mysql_table_${index}" value="${mysqlTable}" required>
+                </div>
+                <div class="form-group">
+                    <label>ClickHouse表名</label>
+                    <input type="text" name="ch_table_${index}" value="${chTable}" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>批次大小</label>
+                    <input type="number" name="batch_size_${index}" value="${batchSize}">
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group" style="margin-top: 25px;">
+                        <input type="checkbox" name="verify_${index}" ${verify ? 'checked' : ''}>
+                        <label>验证数据</label>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    }
+
+    // 删除表配置
+    function removeTable(index) {
+        const element = document.getElementById(`table-${index}`);
+        if (element) {
+            element.remove();
+        }
+    }
+
+    // 收集表单数据
+    function collectFormData() {
+        const formData = {};
+        
+        // MySQL配置
+        formData.mysql = {
+            host: document.getElementById('mysql_host').value,
+            port: parseInt(document.getElementById('mysql_port').value),
+            user: document.getElementById('mysql_user').value,
+            password: document.getElementById('mysql_password').value,
+            database: document.getElementById('mysql_database').value,
+            charset: document.getElementById('mysql_charset').value
+        };
+        
+        // ClickHouse配置
+        formData.clickhouse = {
+            host: document.getElementById('clickhouse_host').value,
+            port: parseInt(document.getElementById('clickhouse_port').value),
+            user: document.getElementById('clickhouse_user').value,
+            password: document.getElementById('clickhouse_password').value,
+            database: document.getElementById('clickhouse_database').value
+        };
+        
+        // 迁移任务配置
+        const tables = [];
+        const tableConfigs = document.querySelectorAll('.table-config');
+        tableConfigs.forEach(config => {
+            const mysqlTable = config.querySelector('input[name^="mysql_table_"]').value;
+            const chTable = config.querySelector('input[name^="ch_table_"]').value;
+            const batchSize = config.querySelector('input[name^="batch_size_"]').value;
+            const verify = config.querySelector('input[name^="verify_"]').checked;
+            
+            if (mysqlTable && chTable) {
+                const table = {
+                    mysql_table: mysqlTable,
+                    ch_table: chTable
+                };
+                if (batchSize) {
+                    table.batch_size = parseInt(batchSize);
+                }
+                table.verify = verify;
+                tables.push(table);
+            }
+        });
+        
+        formData.migration = {
+            tables: tables,
+            default_batch_size: parseInt(document.getElementById('default_batch_size').value),
+            default_verify: document.getElementById('default_verify').checked,
+            log_interval: parseInt(document.getElementById('log_interval').value),
+            progress_bar_width: 40
+        };
+        
+        // 日志配置
+        formData.logging = {
+            level: document.getElementById('logging_level').value,
+            format: '%(asctime)s - %(levelname)s - %(message)s',
+            date_format: '%Y-%m-%d %H:%M:%S',
+            file_prefix: document.getElementById('file_prefix').value,
+            console_output: document.getElementById('console_output').checked
+        };
+        
+        // 性能配置
+        formData.performance = {
+            mysql_fetch_size: parseInt(document.getElementById('mysql_fetch_size').value),
+            clickhouse_max_insert_block_size: 1048576,
+            connection_timeout: parseInt(document.getElementById('connection_timeout').value),
+            read_timeout: parseInt(document.getElementById('read_timeout').value)
+        };
+        
+        // 高级选项
+        formData.advanced = {
+            drop_table_before_create: document.getElementById('drop_table_before_create').checked,
+            create_database_if_not_exists: false,
+            skip_empty_tables: document.getElementById('skip_empty_tables').checked,
+            continue_on_error: document.getElementById('continue_on_error').checked
+        };
+        
+        // 飞书配置
+        formData.feishu = {
+            enabled: document.getElementById('feishu_enabled').checked,
+            webhook_url: document.getElementById('feishu_webhook_url').value,
+            notify_on_start: document.getElementById('notify_on_start').checked,
+            notify_on_success: document.getElementById('notify_on_success').checked,
+            notify_on_failure: document.getElementById('notify_on_failure').checked,
+            notify_on_progress: false,
+            progress_notify_interval: 300,
+            mention_users: [],
+            mention_all: false,
+            env_name: document.getElementById('feishu_env_name').value,
+            project_name: document.getElementById('feishu_project_name').value
+        };
+        
+        return formData;
+    }
+
+    // 保存配置
+    async function saveConfig() {
+        try {
+            const config = collectFormData();
+            const response = await fetch('/api/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                showMessage('配置保存成功', 'success');
+            } else {
+                showMessage('保存失败: ' + result.message, 'error');
+            }
+        } catch (error) {
+            showMessage('保存失败: ' + error.message, 'error');
+        }
+    }
+
+    // 启动迁移
+    async function startMigration() {
+        if (!confirm('确定要启动迁移任务吗？')) {
+            return;
+        }
+        
+        try {
+            const config = collectFormData();
+            
+            // 验证表配置
+            if (!config.migration.tables || config.migration.tables.length === 0) {
+                showMessage('请至少添加一个表配置', 'error');
+                return;
+            }
+            
+            const taskName = prompt('请输入任务名称（可选）:', `迁移任务_${new Date().toLocaleString('zh-CN')}`);
+            
+            const response = await fetch('/api/task/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    config: config,
+                    task_name: taskName || undefined
+                })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                showMessage(`任务已启动！任务ID: ${result.task_id}`, 'success');
+                // 刷新最近任务列表
+                loadRecentTasks();
+                setTimeout(() => {
+                    window.location.href = `/task/${result.task_id}`;
+                }, 2000);
+            } else {
+                showMessage('启动失败: ' + result.message, 'error');
+            }
+        } catch (error) {
+            showMessage('启动失败: ' + error.message, 'error');
+        }
+    }
+
+    // 显示消息
+    function showMessage(message, type) {
+        const msgDiv = document.getElementById('message');
+        msgDiv.textContent = message;
+        msgDiv.className = `message ${type}`;
+        msgDiv.style.display = 'block';
+        
+        setTimeout(() => {
+            msgDiv.style.display = 'none';
+        }, 5000);
+    }
+
+    // 页面加载时加载配置和最近任务
+    window.onload = function() {
+        loadConfig();
+        loadRecentTasks();
+        // 每10秒刷新一次最近任务
+        setInterval(loadRecentTasks, 10000);
+    };
+</script>
+{% endblock %}
