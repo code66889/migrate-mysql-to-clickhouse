@@ -22,6 +22,105 @@
 - **类型映射**：自动处理 MySQL 到 ClickHouse 的数据类型转换
 - **表结构同步**：自动创建 ClickHouse 表结构
 
+
+## 技术架构
+
+### 系统架构图
+
+```mermaid
+graph TB
+    subgraph "用户界面层"
+        A[Web 管理界面<br/>Flask + HTML/CSS/JS]
+        B[命令行接口<br/>Python CLI]
+    end
+    
+    subgraph "应用服务层"
+        C[配置管理<br/>Config Manager]
+        D[任务调度<br/>Task Scheduler]
+        E[数据迁移引擎<br/>Migration Engine]
+        F[任务历史管理<br/>Task History]
+    end
+    
+    subgraph "数据存储层"
+        G[(SQLite 数据库<br/>任务记录/日志)]
+        H[配置文件<br/>conf.yaml]
+    end
+    
+    subgraph "数据源"
+        I[(MySQL 数据库<br/>源数据)]
+    end
+    
+    subgraph "数据目标"
+        J[(ClickHouse 数据库<br/>目标数据)]
+    end
+    
+    subgraph "通知服务"
+        K[飞书机器人<br/>Feishu Notifier]
+    end
+    
+    A --> C
+    A --> D
+    A --> F
+    B --> C
+    B --> D
+    
+    C --> H
+    D --> E
+    D --> F
+    F --> G
+    
+    E --> I
+    E --> J
+    E --> K
+    
+    style A fill:#6366f1,stroke:#4f46e5,color:#fff
+    style B fill:#6366f1,stroke:#4f46e5,color:#fff
+    style E fill:#10b981,stroke:#059669,color:#fff
+    style I fill:#f59e0b,stroke:#d97706,color:#fff
+    style J fill:#3b82f6,stroke:#2563eb,color:#fff
+```
+
+### 数据迁移流程
+
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant Web as Web界面
+    participant Engine as 迁移引擎
+    participant MySQL as MySQL数据库
+    participant CH as ClickHouse数据库
+    participant DB as SQLite数据库
+    participant Feishu as 飞书通知
+    
+    User->>Web: 1. 配置数据库连接
+    User->>Web: 2. 添加迁移表
+    User->>Web: 3. 启动迁移任务
+    
+    Web->>DB: 创建任务记录
+    Web->>Engine: 启动迁移任务
+    
+    Engine->>Feishu: 发送开始通知
+    Engine->>MySQL: 获取表结构
+    Engine->>CH: 创建目标表
+    
+    loop 批量迁移数据
+        Engine->>MySQL: 流式读取数据(SSCursor)
+        Engine->>CH: 批量插入数据
+        Engine->>DB: 记录进度日志
+    end
+    
+    Engine->>MySQL: 验证数据行数
+    Engine->>CH: 验证数据行数
+    Engine->>DB: 更新任务状态
+    Engine->>Feishu: 发送完成通知
+    
+    Web->>DB: 查询任务详情
+    Web->>User: 显示迁移结果
+```
+
+
+
+
 ## 📦 安装
 
 ### 环境要求
